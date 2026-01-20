@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:alpine
+    container_name: redis-broker
+    volumes:
+      - ./redis_data:/data
+    command: redis-server --appendonly yes
+
+  master:
+    image: python:3.9-slim
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: sh -c "pip install -r requirements.txt && python -u master.py"
+    depends_on:
+      - redis
+
+  worker:
+      image: python:3.9-slim
+      volumes:
+        - .:/app
+        - ./wyniki:/data
+      working_dir: /app
+      command: sh -c "pip install -r requirements.txt && python -u worker.py"
+      depends_on:
+        - redis
+      deploy:
+        replicas: 3
