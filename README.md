@@ -7,9 +7,9 @@
 Celem projektu jest zrobienie systemu znalezienie zakodowanego hasła md5 lecz z podziałem na workery aby przyśpieszyć wykonanie tego procesu
 
 **Architektura:**
-1 master.py - steruje cały procesem, rozdziela zakresy według parametrów: BATCH_SIZE,MAX_NUMBER
-2 Redis - przekazuje zadania do workerów oraz służy za prosty cache do przetrzymywanie już znalezionych haseł
-3 worker.py - workery które pobierają zadania i sprawdzają podane zakresy - możemy uruchomić dowolną ilość
+1.  master.py - steruje cały procesem, rozdziela zakresy według parametrów: BATCH_SIZE,MAX_NUMBER
+2.  Redis - przekazuje zadania do workerów oraz służy za prosty cache do przetrzymywanie już znalezionych haseł
+3.  worker.py - workery które pobierają zadania i sprawdzają podane zakresy - możemy uruchomić dowolną ilość
 ---
 
 ##  Instrukcja uruchomienia
