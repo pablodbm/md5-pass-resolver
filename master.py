@@ -1,24 +1,28 @@
 import redis
 import time
 import sys
+from pymongo import MongoClient
 
 r = redis.Redis(host='redis', port=6379, decode_responses=True)
-TARGET_HASH = "674f3c2c1a8a6f90461e8a66fb5550ba"  # Przykladowy hash dla liczby 5678
+mongo_client = MongoClient('mongo', 27017)
+collection = mongo_client.projekt_db.passwords
+
+TARGET_HASH = "674f3c2c1a8a6f90461e8a66fb5550ba"
 BATCH_SIZE = 1000
 MAX_NUMBER = 10000
 EXPECTED_WORKERS = 3
 
-print("Najpierw próbujemy pobrać dane z cache jeśli mamy już to policzone z poprzednich iteracji")
-cached_password = r.get('found_password')
+print("Sprawdzam bazę danych MongoDB")
+existing_result = collection.find_one({"hash": TARGET_HASH})
 
-if cached_password:
+if existing_result:
     print(f"\n==========================================")
-    print(f"Pobrano z cache")
-    print(f" hasło: {cached_password}")
+    print(f"Pobrano z bazy danych")
+    print(f" hasło: {existing_result['password']}")
     print(f"==========================================\n")
     sys.exit(0)
 else:
-    print("NIe udało się pobrać danych z cache")
+    print("Brak wyniku w bazie danych")
 
 r.delete('ready_list')
 r.delete('tasks')

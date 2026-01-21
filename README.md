@@ -8,7 +8,8 @@ Celem projektu jest zrobienie systemu znalezienie zakodowanego hasła md5 lecz z
 
 **Architektura:**
 1.  master.py - steruje cały procesem, rozdziela zakresy według parametrów: BATCH_SIZE,MAX_NUMBER
-2.  Redis - przekazuje zadania do workerów oraz służy za prosty cache do przetrzymywanie już znalezionych haseł
+2.  Redis - przekazuje zadania do workerów
+4.  Mongo - trzymamy w niej już odgagnięte hasła jako cache
 3.  worker.py - workery które pobierają zadania i sprawdzają podane zakresy - możemy uruchomić dowolną ilość
 ---
 
@@ -19,4 +20,5 @@ Uruchomienie od razu przeprowadza proces łamania hasła
 1. Otwórz terminal w folderze projektu.
 2. Wpisz komendę:
    ```bash
-   docker-compose up --build
+   docker-compose build
+   docker compose up
