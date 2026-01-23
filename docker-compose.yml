@@ -11,6 +11,18 @@ services:
     volumes:
       - ./mongo_data:/data/db
 
+  dashboard:
+    build: .
+    container_name: dashboard-ui
+    command: streamlit run dashboard.py --server.port 8501 --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - mongo
+
   master:
     build: .
     volumes:
@@ -31,3 +43,8 @@ services:
         - redis
       deploy:
         replicas: 3
+        restart_policy:
+          condition: on-failure
+          delay: 5s
+          max_attempts: 5
+          window: 120s

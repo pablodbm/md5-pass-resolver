@@ -1,44 +1,62 @@
 import redis
 import time
-import sys
 from pymongo import MongoClient
 
 r = redis.Redis(host='redis', port=6379, decode_responses=True)
 mongo_client = MongoClient('mongo', 27017)
 collection = mongo_client.projekt_db.passwords
 
-TARGET_HASH = "674f3c2c1a8a6f90461e8a66fb5550ba"
 BATCH_SIZE = 1000
-MAX_NUMBER = 10000
+MAX_NUMBER = 100000
 EXPECTED_WORKERS = 3
 
-print("Sprawdzam bazę danych MongoDB")
-existing_result = collection.find_one({"hash": TARGET_HASH})
-
-if existing_result:
-    print(f"\n==========================================")
-    print(f"Pobrano z bazy danych")
-    print(f" hasło: {existing_result['password']}")
-    print(f"==========================================\n")
-    sys.exit(0)
-else:
-    print("Brak wyniku w bazie danych")
-
-r.delete('ready_list')
-r.delete('tasks')
+r.set("status_message", "Gotowy. Czekam na start.")
 
 while True:
-    ready_count = r.llen('ready_list')
-    print(f"Gotowe workery: {ready_count}/{EXPECTED_WORKERS}")
+    while not r.exists("start_cmd"):
+        time.sleep(0.5)
 
-    if ready_count >= EXPECTED_WORKERS:
-        break
-    time.sleep(1)
+    target_hash = r.get("input_hash")
+    r.delete("start_cmd")
+    r.delete("found_signal")
 
-for i in range(0, MAX_NUMBER, BATCH_SIZE):
-    start = i
-    end = i + BATCH_SIZE
-    task = f"{start},{end},{TARGET_HASH}"
-    r.lpush('tasks', task)
+    r.set("status_message", f"Przetwarzam hash: {target_hash[:6]}...")
 
-print("Zadanie wysłane do workerów")
+    existing = collection.find_one({"hash": target_hash})
+    if existing:
+        r.set("status_message", f"Znaleziono w bazie: {existing['password']}")
+        time.sleep(1)
+        continue
+
+    r.delete('tasks')
+    if r.llen('ready_list') == 0:
+        print("Brak workerów! Ale wrzucam zadania.")
+
+    r.set("status_message", "Obliczenia w toku... Workery pracują.")
+
+    for i in range(0, MAX_NUMBER, BATCH_SIZE):
+        start = i
+        end = i + BATCH_SIZE
+        task = f"{start},{end},{target_hash}"
+        r.lpush('tasks', task)
+
+    while True:
+        if r.exists("found_signal"):
+            r.set("status_message", "SUKCES! Hasło odgadnięte.")
+            break
+
+        if r.llen('tasks') == 0:
+            time.sleep(4)
+
+            if r.exists("found_signal"):
+                r.set("status_message", "SUKCES!")
+            elif collection.find_one({"hash": target_hash}):
+                r.set("status_message", "SUKCES! (Potwierdzono w bazie)")
+                r.set("found_signal", "1")
+            else:
+                r.set("status_message", "NIE POWIODŁO SIĘ. Hasło poza zakresem.")
+            break
+
+        time.sleep(1)
+
+    print("Koniec tury.")
